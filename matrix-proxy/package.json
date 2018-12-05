@@ -1,0 +1,40 @@
+{
+  "name": "tsoa-example",
+  "version": "0.0.1",
+  "description": "An example app using tsoa",
+  "scripts": {
+    "start": "npm run build && node ./dist/server.js",
+    "build": "npm run clean && npm run lint && npm run swagger-gen && npm run routes-gen && tsc && npm run copy-swagger-ui",
+    "lint": "tslint --type-check --project tsconfig.json ./src/**/*.ts",
+    "clean": "rimraf dist",
+    "swagger-gen": "tsoa swagger",
+    "routes-gen": "tsoa routes",
+    "copy-swagger-ui": "ncp ./src/swagger-ui ./dist/swagger-ui",
+    "tsoa": "tsoa"
+  },
+  "author": "Luke Autry <lukeautry@gmail.com> (http://www.lukeautry.com)",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.15.4",
+    "matrix-js-sdk": "^0.14.1",
+    "method-override": "^2.3.9",
+    "pg": "^7.6.1",
+    "socket.io": "^2.1.1",
+    "tsoa": "*"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.16.5",
+    "@types/express": "^4.0.37",
+    "@types/method-override": "^0.0.30",
+    "@types/node": "^6.0.88",
+    "ncp": "^2.0.0",
+    "rimraf": "^2.6.2",
+    "tslint": "^5.7.0",
+    "typescript": "^2.5.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lukeautry/tsoa-example.git"
+  }
+}

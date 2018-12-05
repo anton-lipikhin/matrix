@@ -1,0 +1,52 @@
+@import url('https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css');
+
+.ng-valid[required], .ng-valid.required  {
+  border-left: 5px solid #42A948; /* green */
+}
+
+.ng-invalid:not(form)  {
+  border-left: 5px solid #a94442; /* red */
+}
+
+.custom-table{
+  width: 100%;
+  border: 1px solid #c7c7c7;
+  margin-bottom: .5em;
+}
+.custom-table th {
+    font-weight:bold;
+    padding:4px;
+    white-space: nowrap;
+    text-align: center;
+    border-left: 1px solid rgba(192, 192, 192, 0.3);
+}
+.custom-table td {
+    padding:4px;
+    //border-top: 1px solid #c7c7c7;
+    //white-space: nowrap;
+    max-width: 240px;
+    //overflow-x: hidden;
+    //text-overflow: ellipsis;
+    border-left: 1px solid rgba(192, 192, 192, 0.3);
+}
+.custom-table td.no-field-divider{
+    border-left: none;
+}
+.custom-table tr:nth-child(even) {background-color: #EEEEEE}
+.custom-table tr:nth-child(odd){background-color: white}
+.custom-table.row-even{
+  background-color:#EEEEEE;
+}
+.custom-table.row-odd{
+  background-color:white;
+}
+.top-space{
+  margin-top: 40px;
+}
+.left-space{
+  margin-left: 40px;
+}
+nav li{
+  padding: 10px;
+  display: inline-block;
+}

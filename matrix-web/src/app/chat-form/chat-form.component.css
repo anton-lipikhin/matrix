@@ -1,0 +1,24 @@
+.message-list-box{
+    height: 600px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow-y: scroll;
+}
+.message-item{
+    border-radius: 4px;
+    background: #ececec;
+    margin: 4px 10px;
+    padding: 4px 10px;
+    display: inline-block;
+}
+.message-sender{
+    color: #008eff;
+    font-size: 11px;
+    font-weight: bold;
+}
+.message-text{
+
+}
+.message-friend{
+    margin-left: 30px;
+}

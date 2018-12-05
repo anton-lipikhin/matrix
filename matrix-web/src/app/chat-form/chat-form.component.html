@@ -1,0 +1,56 @@
+<div class="container">
+
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="message-list-box">
+          <div *ngFor="let item of messageList">
+            <div class="message-item" [ngClass]="{'message-friend': item.userName !== 'matrix_user'}">
+              <div class="message-sender">
+                {{item.userName}}
+              </div>
+              <div class="message-text">
+                {{item.message}}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="">
+          <textarea class="form-control"
+                    [(ngModel)]="operatorMessage"
+                    id="operatorMessage" rows="2"
+                    (keyup.enter)="onOperatorSend()"
+          ></textarea>
+        </div>
+        <div class="">
+          <button class="btn btn-success" (click)="onOperatorSend()">Отправить</button>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="message-list-box">
+          <div *ngFor="let item of messageList">
+            <div class="message-item" [ngClass]="{'message-friend': item.userName !== 'alipikhin'}">
+              <div class="message-sender">
+                {{item.userName}}
+              </div>
+              <div class="message-text">
+                {{item.message}}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="">
+          <textarea class="form-control"
+                    [(ngModel)]="clientMessage"
+                    id="clientMessage" rows="2"
+                    (keyup.enter)="onClientSend()"
+          ></textarea>
+        </div>
+        <div class="">
+          <button class="btn btn-success" (click)="onClientSend()">Отправить</button>
+        </div>
+      </div>
+
+    </div>
+
+</div>
