@@ -3,19 +3,13 @@ import { Controller, ValidateParam, FieldErrors, ValidateError, TsoaRoute } from
 import { MatrixController } from './controllers/matrixController';
 
 const models: TsoaRoute.Models = {
-    "UserCredentials": {
-        "properties": {
-            "user_name": { "dataType": "string", "required": true },
-            "password": { "dataType": "string", "required": true },
-        },
-    },
 };
 
 export function RegisterRoutes(app: any) {
-    app.post('/v1/matrix/connect',
+    app.get('/v1/matrix/connect',
         function(request: any, response: any, next: any) {
             const args = {
-                credentials: { "in": "body", "name": "credentials", "required": true, "ref": "UserCredentials" },
+                phoneNumber: { "in": "query", "name": "phoneNumber", "required": true, "dataType": "double" },
             };
 
             let validatedArgs: any[] = [];

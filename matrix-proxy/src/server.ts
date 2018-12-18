@@ -1,9 +1,12 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
 // import * as ws from 'socket.io';
 import * as methodOverride from 'method-override';
 import { RegisterRoutes } from './routes';
-import { initMatrix } from './services/matrixService';
+ import { matrixService } from './services/matrixService';
 
 const app = express();
 
@@ -30,8 +33,16 @@ app.use(methodOverride());
 
 RegisterRoutes(app);
 
-initMatrix();
+// Init Matrix service before use
+matrixService();
 
 /* tslint:disable-next-line */
 console.log('Starting server on port 3000...');
-app.listen(3000);
+app.listen(process.env.SERVER_APP_PORT);
+
+process.on('SIGINT', (e) => {
+    console.info('SIGTERM signal received.', e);
+    // TODO: Correctly disconnect from socket & ActiveMQ
+    process.exit();
+});
+
