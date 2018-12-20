@@ -1,6 +1,6 @@
-#Matrix Proxy Server
+# Matrix Proxy Server
 
-##Получение информации о клиенте:
+## Получение информации о клиенте:
 Request:  
 Method: GET  
 URL: http://localhost:3000/v1/matrix/connect?phoneNumber=77057279817  
@@ -16,7 +16,7 @@ Response:
 Error:  
 {"success": false, "error": {"fields": {"phoneNumber": {"message": "Query parameter \"phoneNumber\" is required"}}, "message": "Bad request", "status": 400, "name": "ValidateError"}, "data": null, "pageCount": 0}  
 
-##Подключение по сокету:
+## Подключение по сокету:
 1. по дефолту сокет на 3010 порту, может поменяться
 2. после подключения подписываемся на события:  
 &nbsp;&nbsp;&nbsp;&nbsp;**"message"** - для получения сообщений от оператора;  
@@ -24,7 +24,7 @@ Error:
 3. имитим событие "authenticate" и передаем объект типа {phoneNumber: 77057279817}, в ответ веренется "authenticated" с объектом:  
 userInfo = {"userName": "client77057279817", "accessToken": "MDAxOWxvY2F0aW9uIGV4YW ... ", "userId": "@client77057279817:example.com", "room": {"roomId": "!rcoefiJcRBYuUZYbVk:example.com", "roomAlias": "room77057279817", "roomAliasId": "#room77057279817:example.com"}}
 
-##Отправляем сообщение (REST):
+## Отправляем сообщение (REST):
 
 sendMessage(credentials, room_id, message): Observable<any> {
 	let txnId = new Date().getTime();
