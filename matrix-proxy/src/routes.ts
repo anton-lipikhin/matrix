@@ -9,7 +9,7 @@ export function RegisterRoutes(app: any) {
     app.get('/v1/matrix/connect',
         function(request: any, response: any, next: any) {
             const args = {
-                phoneNumber: { "in": "query", "name": "phoneNumber", "required": true, "dataType": "double" },
+                request: { "in": "request", "name": "request", "required": true, "dataType": "object" },
             };
 
             let validatedArgs: any[] = [];

@@ -2,6 +2,7 @@ import * as sdk from 'matrix-js-sdk';
 import * as ws from 'socket.io';
 import * as Stomp from 'node-stomp';
 import * as crypto from 'crypto';
+import { log } from '../api/log';
 // import {MatrixLogin} from '../models/matrix';
 
 class MatrixService {
@@ -27,6 +28,10 @@ class MatrixService {
         this.startClient().then(() => {
             // Nothing to do here
         }).catch(error => {
+            log.error('MATRIX [MatrixService::Service:startClient]: Error', {
+                stack_trace: error,
+                code: error.code
+            });
             // TODO: manage error here
         });
     }
@@ -38,13 +43,15 @@ class MatrixService {
                     this.accessToken = response.access_token;
                     // TODO: TEST search - remove it after debugging
                     this.searchUsers('client').then(userList => {
-                        console.log('MATRIX USER LIST', userList);
+                        log.info('MATRIX [MatrixService::Service:searchUsers]: Info', {content: userList});
                     }).catch(error => {
-                        console.error('MATRIX USER LIST ERROR', error);
+                        log.error('MATRIX [MatrixService::Service:searchUsers]: Error', {
+                            stack_trace: error,
+                            code: error.code
+                        });
                     });
                     this.startSocket().then(socket => {
                         this.socket = socket;
-                        console.log('MATRIX USER AUTH', response);
                         this.stompConnect().then(() => {
                             resolve();
                         });
@@ -63,7 +70,7 @@ class MatrixService {
             this.authenticate(adminCredentials).then(response => {
 
                 this.on('event', data => {
-                    console.log('matrixService.event', data.event.type);
+                    log.debug('MATRIX [MatrixService::Service:event]: Debug', {event_type: data.event.type});
 
                     if (data.event.type === 'm.fully_read') {
                         this.historyRead = true;
@@ -71,7 +78,10 @@ class MatrixService {
 
                     if (this.historyRead && data.event.type === 'm.room.message') {
                         let event = data.event;
-                        console.log('MESSAGE', event);
+                        log.debug('MATRIX [MatrixService::Service:event]: Debug', {
+                            event_type: data.event.type,
+                            event_data: event
+                        });
 
                         let matrixMessage = JSON.parse(event.content.body);
 
@@ -83,7 +93,10 @@ class MatrixService {
                                 'persistent': 'true',
                                 'expires': 0
                             };
-                            console.log('SEND MESSAGE TO MQ', headers);
+                            log.debug('MATRIX [MatrixService::Service:event]: Debug', {
+                                debug_msg: 'Sending message to MQ',
+                                debug_data: headers
+                            });
                             this.stompClient.send(headers, false);
                         }
 
@@ -91,10 +104,15 @@ class MatrixService {
                             let msg = JSON.parse(event.content.body);
                             let userName = this.matrixUserId(`client${msg.client_id}`);
                             let sb = this.clients.find(item => { return item.userName === userName; });
-                            console.log('SUBSCRIBER clients', this.clients);
-                            console.log('SUBSCRIBER userName', userName);
-                            console.log('SUBSCRIBER socket', sb);
+                            log.debug('MATRIX [MatrixService::Service:event]: Debug', {
+                                debug_msg: 'Looking for client`s socket',
+                                debug_data: sb
+                            });
                             if (sb) {
+                                log.debug('MATRIX [MatrixService::Service:event]: Debug', {
+                                    debug_msg: 'Sending message to client by socket',
+                                    debug_data: event.content.body
+                                });
                                 sb.socketClient.emit('message', event.content.body);
                             }
                         }
@@ -107,7 +125,10 @@ class MatrixService {
 
                 resolve(response);
             }).catch(error => {
-                console.log('AUTH ERROR', error);
+                log.warn('MATRIX [MatrixService::Service:authenticate]: Warning', {
+                    stack_trace: error,
+                    code: error.code
+                });
                 reject(error);
             });
         });
@@ -117,38 +138,50 @@ class MatrixService {
         return new Promise<any>((resolve, reject) => {
             let socket = ws();
             socket.on('connection', client => {
-                console.log('SOCKET: CONNECTED', client.id);
+                log.debug('SOCKET [MatrixService::Service:event]: Debug', {
+                    debug_msg: 'Socket "connection" event',
+                    debug_data: client.id
+                });
 
-                client.on('authenticate', e => {
-                    console.log('SOCKET: AUTHENTICATE', e);
-                    let userName = this.matrixUserId(`client${e.phoneNumber}`);
+                client.on('authenticate', event => {
+                    console.log('SOCKET: AUTHENTICATE', event);
+                    log.debug('SOCKET [MatrixService::Service:event]: Debug', {
+                        debug_msg: 'Socket "authenticate" event',
+                        debug_data: event
+                    });
+                    let userName = this.matrixUserId(`client${event.phoneNumber}`);
 
                     let sb = this.clients.find(item => { return item.userName === userName; });
                     if (!sb) {
                         this.clients.push({socketClient: client, userName: userName});
                     }
-                    console.log('CLIENTS:', this.clients);
 
-                    this.getClientDetails(e.phoneNumber).then(user => {
-                        //console.log('SOCKET: AUTHENTICATED', user);
+                    this.getClientDetails(event.phoneNumber).then(user => {
+                        log.debug('SOCKET [MatrixService::Service:event]: Debug', {
+                            debug_msg: 'Sending "authenticated" event to client',
+                            debug_data: user
+                        });
                         client.emit('authenticated', user);
                     });
                 });
 
                 client.on('message', message => {
-                    console.log('WEB MESSAGE', message);
-                    // let matrixMessage = JSON.parse(message);
-                    // matrixMessage.mqMessageId = mqMessage.headers['message-id'];
+                    log.debug('SOCKET [MatrixService::Service:event]: Debug', {
+                        debug_msg: 'Pass client message to Matrix',
+                        debug_data: message
+                    });
                     this.sendMessage(message.client_id, JSON.stringify(message));
                 });
 
                 client.on('disconnect', () => {
-                    console.log('SOCKET: DISCONNECTED', client.id);
+                    log.debug('SOCKET [MatrixService::Service:event]: Debug', {
+                        debug_msg: 'Socket "disconnect" event',
+                        debug_data: client.id
+                    });
                     let sbIndex = this.clients.findIndex(item => { return item.socketClient.id === client.id; });
                     if (sbIndex > -1) {
                         this.clients.splice(sbIndex, 1);
                     }
-                    console.log('CLIENTS:', this.clients.length);
                 });
 
                 client.emit('connection', {});
@@ -186,7 +219,9 @@ class MatrixService {
     stompConnect() {
         return new Promise(resolve => {
             this.stompClient.on('connected', () => {
-                console.log('STOMP: CONNECTED');
+                log.debug('STOMP [MatrixService::Service:event]: Debug', {
+                    debug_msg: 'Stomp "connected" event'
+                });
                 let promises = [];
                 // promises.push(this.connectMQ(process.env.ACTIVE_MQ_IN_QUEUE));
                 promises.push(this.connectMQ(process.env.ACTIVE_MQ_OUT_QUEUE));
@@ -195,23 +230,38 @@ class MatrixService {
                 });
             });
             this.stompClient.on('disconnected', () => {
-                console.log('STOMP: DISCONNECTED');
+                log.debug('STOMP [MatrixService::Service:event]: Debug', {
+                    debug_msg: 'Stomp "disconnected" event'
+                });
             });
-            this.stompClient.on('error', e => {
-                console.log('STOMP: ERROR', e);
+            this.stompClient.on('error', error => {
+                log.error('STOMP [MatrixService::Service:event]: Error', {
+                    stack_trace: error,
+                    code: error.code
+                });
             });
             this.stompClient.on('message', mqMessage => {
-                console.log('MQ MESSAGE', mqMessage);
+                log.debug('STOMP [MatrixService::Service:event]: Debug', {
+                    debug_msg: 'Stomp "message" event',
+                    debug_data: mqMessage
+                });
                 let messageList = mqMessage.body;
                 for (let item of messageList) {
                     let matrixMessage = JSON.parse(item);
                     matrixMessage.mqMessageId = mqMessage.headers['message-id'];
+                    log.debug('STOMP [MatrixService::Service:event]: Debug', {
+                        debug_msg: 'Pass operator message to Matrix',
+                        debug_data: matrixMessage
+                    });
                     this.sendMessage(matrixMessage.client_id, JSON.stringify(matrixMessage));
                 }
                 this.stompClient.ack(mqMessage.headers['message-id']);
             });
             this.stompClient.on('receipt', receipt => {
-                console.log('[AMQ] RECEIPT:', receipt);
+                log.debug('STOMP [MatrixService::Service:event]: Debug', {
+                    debug_msg: 'Stomp "receipt" event',
+                    debug_data: receipt
+                });
             });
             this.stompClient.connect();
         });
@@ -219,9 +269,10 @@ class MatrixService {
 
     sendMessage(phoneNumber, message) {
         this.getClientDetails(phoneNumber).then(user => {
-            //let roomId = '!wzjyidcrNmrgkzSfcT:example.com'; // this.getRoomByUser();
-            console.log('MATRIX sendMessage user', user);
-            console.log('MATRIX sendMessage message', message);
+            log.debug('MATRIX [MatrixService::Service:sendMessage]: Debug', {
+                debug_msg: 'Send message to client',
+                debug_data: message
+            });
             let content = {
                 msgtype: 'm.text',
                 body: message
@@ -245,8 +296,7 @@ class MatrixService {
     register(userName) {
         return new Promise<any>((resolve, reject) => {
             this.matrixClient._http.request((nonceErr, nonceData) => {
-                // console.log('USER REGISTER NONCE', nonceErr, nonceData);
-                let password = process.env.MATRIX_DEFAULT_PASSWORD; // `P${userName}`;
+                let password = process.env.MATRIX_DEFAULT_PASSWORD;
 
                 let hmac = crypto
                     .createHmac('sha1', process.env.MATRIX_SECRET_KEY)
@@ -266,11 +316,7 @@ class MatrixService {
                     mac: hmac.digest('hex')
                 };
 
-                console.log('DETAILS REG regData', regData);
                 this.matrixClient._http.request((err, data) => {
-                    console.log('USER REGISTER ERROR', err);
-                    console.log('USER REGISTER DATA', data);
-
                     if (data) {
                         let newUser = {
                             userName: userName,
@@ -297,7 +343,6 @@ class MatrixService {
                 password: credentials.password,
                 initial_device_display_name: 'Jungle Phone'
             };
-            console.log('authenticateClient authData', authData);
             this.matrixClient._http.request((err, data) => {
                 if (err) {
                     reject(err);
@@ -312,9 +357,11 @@ class MatrixService {
         return new Promise<any>((resolve, reject) => {
             let userName = `client${clientPhoneNumber}`;
             let userId = this.matrixUserId(userName);
-            console.log('DETAILS userId', userId);
             this.getUser(userId).then(users => {
-                console.log('DETAILS USER', users);
+                log.debug('MATRIX [MatrixService::Service:getUser]: Debug', {
+                    debug_msg: `Looking for a client by user_id: ${userId}`,
+                    debug_data: {user: users}
+                });
                 if (users.length > 0) {
                     let credentials = {
                         userName: userName,
@@ -326,20 +373,38 @@ class MatrixService {
                             accessToken: response['access_token'],
                             userId: response['user_id']
                         };
+                        log.debug('MATRIX [MatrixService::Service:authenticateClient]: Debug', {
+                            debug_msg: `Client successfully authenticatad`,
+                            debug_data: userData
+                        });
                         resolve(userData);
                     }).catch(error => {
-                        console.error('AUTHENTICATE USER ERROR', error);
+                        log.error('MATRIX [MatrixService::Service:authenticateClient]: Error', {
+                            stack_trace: error,
+                            code: error.code
+                        });
                         reject(error);
                     });
                 } else {
                     this.register(userName).then(newUser => {
+                        log.debug('MATRIX [MatrixService::Service:authenticateClient]: Debug', {
+                            debug_msg: `Client successfully registered`,
+                            debug_data: newUser
+                        });
                         resolve(newUser);
                     }).catch(error => {
-                        console.error('REGISTER NEW USER ERROR', error);
+                        log.error('MATRIX [MatrixService::Service:register]: Error', {
+                            stack_trace: error,
+                            code: error.code
+                        });
                         reject(error);
                     });
                 }
             }).catch(error => {
+                log.error('MATRIX [MatrixService::Service:getUser]: Error', {
+                    stack_trace: error,
+                    code: error.code
+                });
                 reject(error);
             });
         });
@@ -354,7 +419,6 @@ class MatrixService {
                 name: roomAlias,
                 topic: 'vsk_chat'
             };
-            console.log('createRoom options', options);
             this.matrixClient._http.request((err, data) => {
                 if (err) {
                     reject(err);
@@ -369,20 +433,37 @@ class MatrixService {
         return new Promise<any>((resolve, reject) => {
             let roomAliasId = this.matrixRoomAlias(roomAlias);
             this.matrixClient.getRoomIdForAlias(roomAliasId, (err, data) => {
-                console.log('getRoomIdForAlias ERROR', err);
-                console.log('getRoomIdForAlias ROOM', data);
                 if (err) {
+                    log.debug('MATRIX [MatrixService::Service:getRoomIdForAlias]: Debug', {
+                        debug_msg: `Looking for a room by alias: ${roomAliasId}`,
+                        debug_data: err
+                    });
                     if (err.errcode === 'M_NOT_FOUND') {
                         this.createRoom(roomAlias).then(room => {
-                            console.log('CREATE ROOM', room);
+                            log.debug('MATRIX [MatrixService::Service:createRoom]: Debug', {
+                                debug_msg: `Room successfully created: ${roomAliasId}`,
+                                debug_data: room
+                            });
                             resolve({roomId: room.room_id, roomAlias, roomAliasId});
                         }).catch(error => {
+                            log.error('MATRIX [MatrixService::Service:createRoom]: Error', {
+                                stack_trace: error,
+                                code: error.code
+                            });
                             reject(error);
                         });
                     } else {
+                        log.error('MATRIX [MatrixService::Service:getRoomIdForAlias]: Error', {
+                            stack_trace: err,
+                            code: err.code
+                        });
                         reject(err);
                     }
                 } else {
+                    log.debug('MATRIX [MatrixService::Service:getRoomIdForAlias]: Debug', {
+                        debug_msg: `Room found by alias: ${roomAliasId}`,
+                        debug_data: data
+                    });
                     resolve({roomId: data.room_id, roomAlias, roomAliasId});
                 }
             });
@@ -429,32 +510,58 @@ class MatrixService {
     getClientDetails(clientPhoneNumber) {
         return new Promise<any>((resolve, reject) => {
             this.getUserOrRegister(clientPhoneNumber).then(user => {
-                console.log('getUserOrRegister USER', user);
                 let roomAlias = `room${clientPhoneNumber}`;
                 this.getRoomOrCreate(roomAlias).then(room => {
                     user.room = room;
                     this.isUserJoinedRoom(user, room.roomId).then(isJoined => {
-                        console.log('isUserJoinedRoom', isJoined);
                         if (isJoined) {
                             resolve(user);
                         } else {
                             this.invite(user, room.roomId).then(inviteData => {
-                                console.log('getUserOrRegister INVITE', inviteData);
+                                log.debug('MATRIX [MatrixService::Service:invite]: Debug', {
+                                    debug_msg: `User successfully invited`,
+                                    debug_data: inviteData
+                                });
                                 this.join(user, room.roomId).then(joinData => {
-                                    console.log('getUserOrRegister JOIN', joinData);
+                                    log.debug('MATRIX [MatrixService::Service:join]: Debug', {
+                                        debug_msg: `User successfully joined`,
+                                        debug_data: joinData
+                                    });
                                     resolve(user);
                                 }).catch(error => {
+                                    log.error('MATRIX [MatrixService::Service:join]: Error', {
+                                        stack_trace: error,
+                                        code: error.code
+                                    });
                                     reject(error);
                                 });
+                            }).catch(error => {
+                                log.error('MATRIX [MatrixService::Service:invite]: Error', {
+                                    stack_trace: error,
+                                    code: error.code
+                                });
+                                reject(error);
                             });
                         }
                     }).catch(error => {
+                        log.error('MATRIX [MatrixService::Service:isUserJoinedRoom]: Error', {
+                            stack_trace: error,
+                            code: error.code
+                        });
                         reject(error);
                     });
                 }).catch(error => {
+                    log.error('MATRIX [MatrixService::Service:getRoomOrCreate]: Error', {
+                        stack_trace: error,
+                        code: error.code
+                    });
                     reject(error);
                 });
             }).catch(error => {
+                log.error('MATRIX [MatrixService::Service:getUserOrRegister]: Error', {
+                    stack_trace: error,
+                    code: error.code
+                });
                 reject(error);
             });
         });
@@ -465,6 +572,10 @@ class MatrixService {
             this.searchUsers(userId).then(userList => {
                 resolve(userList);
             }).catch(error => {
+                log.error('MATRIX [MatrixService::Service:searchUsers]: Error', {
+                    stack_trace: error,
+                    code: error.code
+                });
                 reject(error);
             });
         });
@@ -487,7 +598,10 @@ class MatrixService {
     }
 
     on(event, callback) {
-        console.log('EVENT SUBSCRIPTION', event);
+        log.debug('MATRIX [MatrixService::Service:join]: Debug', {
+            debug_msg: `Subscribing to matrix event`,
+            debug_data: event
+        });
         this.matrixClient.on(event, callback);
     }
 
@@ -502,7 +616,6 @@ let matrixServiceInstance = null;
 
 export function matrixService() {
     if (!matrixServiceInstance) {
-        console.log('CREATE MATRIX SERVICE');
         matrixServiceInstance = new MatrixService();
     }
     return matrixServiceInstance;

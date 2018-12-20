@@ -6,7 +6,8 @@ import * as express from 'express';
 // import * as ws from 'socket.io';
 import * as methodOverride from 'method-override';
 import { RegisterRoutes } from './routes';
- import { matrixService } from './services/matrixService';
+import { matrixService } from './services/matrixService';
+import { log } from './api/log';
 
 const app = express();
 
@@ -38,11 +39,20 @@ matrixService();
 
 /* tslint:disable-next-line */
 console.log('Starting server on port 3000...');
-app.listen(process.env.SERVER_APP_PORT);
-
-process.on('SIGINT', (e) => {
-    console.info('SIGTERM signal received.', e);
+app.listen(process.env.SERVER_APP_PORT)
+    .on('error', (error: any) => {
+        log.warn('START [Server::Main:app.listen]: Warning', {
+            stack_trace: error,
+            code: error.code
+        });
+        log.info(`SHUTDOWN [Server::Main:app.listen]: Info: ${error.code}`, {});
+        process.exit();
+    });
+process.on('SIGINT', event => {
+    log.info(`SHUTDOWN [Server::Main:event.SIGTERM]: Info: ${event}`, {});
     // TODO: Correctly disconnect from socket & ActiveMQ
     process.exit();
 });
+
+
 
