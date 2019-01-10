@@ -5,6 +5,9 @@ import * as crypto from 'crypto';
 import { log } from '../api/log';
 // import {MatrixLogin} from '../models/matrix';
 
+// !!! Insecure workaround to reject self-signed
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
+
 class MatrixService {
 
     matrixClient: any;
