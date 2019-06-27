@@ -7,7 +7,7 @@ import { Socket } from 'ngx-socket-io';
     providedIn: 'root'
 })
 export class MatrixService {
-    private url = 'https://matrix.altyn-i.kz/_matrix/client/r0';
+    private url = 'https://matrix.some-domain.com/_matrix/client/r0';
     private subscribers = [];
 
     constructor(private http: HttpClient, private socket: Socket) {}
